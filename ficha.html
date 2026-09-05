@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#3d2b24">
+<title>FichaSpa</title>
+<style>
+:root{--bg:#f4efe8;--card:#fffdf9;--ink:#2a211c;--muted:#6e5e55;--line:#e4d6c8;--accent:#8b4d3b;--ok:#2f6b4f;--warn:#9a3b2a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,sans-serif;min-height:100%}
+header.app{position:sticky;top:0;z-index:20;background:#3d2b24;color:#f8f1ea;padding:calc(14px + env(safe-area-inset-top)) 16px 14px}
+header.app h1{margin:0;font-size:18px}.sub{opacity:.8;font-size:12px}
+nav.tabs{display:flex;gap:8px;padding:10px 12px;background:#efe6dc;position:sticky;top:52px;z-index:15}
+nav.tabs button{flex:1;border:0;background:#fff;border-radius:999px;padding:12px 8px;font-weight:700;color:var(--muted)}
+nav.tabs button.on{background:var(--accent);color:#fff}
+.wrap{padding:14px;max-width:980px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 10px}h3{font-size:14px;margin:18px 0 8px;color:var(--accent)}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600}
+input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:16px}
+textarea{min-height:70px}.row,.row3{display:grid;gap:10px}.row{grid-template-columns:1fr 1fr}.row3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:640px){.row,.row3{grid-template-columns:1fr}}
+.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:700;font-size:15px}
+.btn-p{background:var(--accent);color:#fff}.btn-s{background:#efe6dc}.btn-g{background:var(--ok);color:#fff}.btn-d{background:#f3e4e0;color:var(--warn)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.search{width:100%;margin-bottom:10px}
+.client{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+.checkgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.checkgrid label{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink);margin:0}
+.sigbox canvas{width:100%;height:140px;touch-action:none;border:1px dashed #c9b6a6;border-radius:12px;background:#fff}
+.photos img,.mini img{object-fit:cover;border-radius:8px}.photos img{width:92px;height:92px;margin:4px}.mini img{width:64px;height:64px;margin:3px}
+.hidden{display:none!important}.empty,.note{color:var(--muted);font-size:13px}
+details.blk{border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:10px 0;background:#faf6f1}
+.phblock{border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2a211c;color:#fff;padding:10px 16px;border-radius:999px;opacity:0}#toast.show{opacity:1}
+@media print{header.app,nav.tabs,.no-print,#toast{display:none!important}.print-only{display:block!important}}.print-only{display:none}
+</style></head>
+<body>
+<header class="app"><h1 id="spaTitle">FichaSpa</h1><div class="sub" id="spaSub">Expediente local</div></header>
+<nav class="tabs no-print">
+<button type="button" class="on" data-tab="clientes">Clientes</button>
+<button type="button" data-tab="nueva">Nueva ficha</button>
+<button type="button" data-tab="ajustes">Ajustes</button>
+</nav>
+<div class="wrap">
+<section id="tab-clientes">
+<input class="search" id="q" placeholder="Buscar">
+<div class="actions no-print"><button class="btn btn-p" type="button" id="btnNueva">+ Nueva clienta</button></div>
+<div class="card" id="lista"></div>
+</section>
+<section id="tab-nueva" class="hidden"><div class="card" id="formFicha"></div></section>
+<section id="tab-ajustes" class="hidden">
+<div class="card"><h2>Datos del spa</h2>
+<label>Nombre</label><input id="cfgNombre">
+<label>Terapeuta</label><input id="cfgTerapeuta">
+<label>Ciudad</label><input id="cfgCiudad">
+<label>Telefono</label><input id="cfgTel">
+<div class="actions"><button class="btn btn-p" type="button" id="btnCfg">Guardar</button></div>
+<div class="actions"><button class="btn btn-s" type="button" id="btnExp">Exportar</button>
+<button class="btn btn-s" type="button" id="btnImp">Importar</button>
+<input id="imp" type="file" accept="application/json" class="hidden"></div></div>
+</section>
+<div id="vistaCliente" class="hidden"></div>
+<div id="printArea" class="print-only"></div>
+</div>
+<div id="toast"></div>
+<script>
+var COND=["Embarazo","Lactancia","Hipertension","Diabetes","Cardiacos","Epilepsia","Asma","Cancer","Tiroides","Coagulacion","Herpes","Rosacea","Acne","Eccema","Queloides","Marcapasos","Cirugia 12m","Isotretinoina","Alergia latex","Tatuaje zona","Sol reciente","Herida"];
+var SERV=["Facial","Limpieza","Peeling","Masaje","Corporal","Depilacion","Cejas","Otro"];
+var DB={cfg:{nombre:"Mi Spa",terapeuta:"",ciudad:"Celaya, Gto.",tel:""},clientes:[]};
+var editId=null,visitaEdit=null,modoNV=false;
+function $(id){return document.getElementById(id)}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(function(){t.classList.remove("show")},2000)}
+function load(){try{var r=localStorage.getItem("fichaspa_v1");if(r)DB=JSON.parse(r)}catch(e){}cfg()}
+function save(){localStorage.setItem("fichaspa_v1",JSON.stringify(DB))}
+function esc(s){s=String(s==null?"":s);return s.split('"').join("'").split("<").join(" ").split(">").join(" ")}
+function cfg(){$("spaTitle").textContent=DB.cfg.nombre||"FichaSpa";$("spaSub").textContent=DB.cfg.terapeuta||"Expediente local";$("cfgNombre").value=DB.cfg.nombre||"";$("cfgTerapeuta").value=DB.cfg.terapeuta||"";$("cfgCiudad").value=DB.cfg.ciudad||"";$("cfgTel").value=DB.cfg.tel||""}
+function guardarAjustes(){DB.cfg={nombre:$("cfgNombre").value.trim()||"Mi Spa",terapeuta:$("cfgTerapeuta").value.trim(),ciudad:$("cfgCiudad").value.trim(),tel:$("cfgTel").value.trim()};save();cfg();toast("Guardado")}
+function irTab(name){var buttons=document.querySelectorAll("nav.tabs button");for(var i=0;i<buttons.length;i++){var b=buttons[i];if(b.getAttribute("data-tab")===name)b.classList.add("on");else b.classList.remove("on")}$("tab-clientes").classList.toggle("hidden",name!=="clientes");$("tab-nueva").classList.toggle("hidden",name!=="nueva");$("tab-ajustes").classList.toggle("hidden",name!=="ajustes");$("vistaCliente").classList.add("hidden");if(name==="nueva"){if(!editId)modoNV=false;form()}if(name==="clientes")lista()}
+function lista(){var q=$("q").value.toLowerCase();var L=[],i,c;for(i=0;i<DB.clientes.length;i++){c=DB.clientes[i];if(!q||(c.nombre||"").toLowerCase().indexOf(q)>=0||(c.tel||"").indexOf(q)>=0)L.push(c)}L.sort(function(a,b){return (a.nombre||"").localeCompare(b.nombre||"","es")});if(!L.length){$("lista").innerHTML='<div class="empty">Aun no hay clientas.</div>';return}var html="";for(i=0;i<L.length;i++){c=L[i];html+='<div class="client"><div><b>'+esc(c.nombre)+'</b><small> '+esc(c.tel||"")+' \u00b7 '+((c.visitas||[]).length)+' visitas</small></div><button class="btn btn-s" type="button" data-open="'+c.id+'">Abrir</button></div>'}$("lista").innerHTML=html}
+function nuevoCliente(){editId=null;visitaEdit=null;modoNV=false;irTab("nueva")}
+function vacio(){return{id:uid(),nombre:"",fnac:"",edad:"",tel:"",email:"",dir:"",ocup:"",emergNombre:"",emergTel:"",emergPar:"",referido:"",alergias:"",meds:"",notasMed:"",condiciones:[],peso:"",estatura:"",cintura:"",cadera:"",busto:"",muslo:"",tipoPiel:"",fototipo:"",creado:new Date().toISOString(),visitas:[]}}
+function nv(v){v=v||{};return{id:v.id||uid(),fecha:v.fecha||new Date().toISOString().slice(0,10),servicio:v.servicio||"Facial",motivo:v.motivo||"",tratamiento:v.tratamiento||"",productos:v.productos||"",reaccion:v.reaccion||"",recs:v.recs||"",fotosAntes:v.fotosAntes||v.fotos||[],fotosDespues:v.fotosDespues||[],fotosSeg:v.fotosSeg||[],notaSeg:v.notaSeg||"",firmaCli:v.firmaCli||"",firmaTer:v.firmaTer||"",acepta:!!v.acepta}}
+function thumbs(a){var o="",i;a=a||[];for(i=0;i<a.length;i++)o+='<img src="'+a[i]+'">';return o}
+function findC(id){for(var i=0;i<DB.clientes.length;i++)if(DB.clientes[i].id===id)return DB.clientes[i];return null}
+function cons(){return "CARTA RESPONSIVA. Informe antecedentes a "+(DB.cfg.nombre||"el spa")+". Me explicaron el procedimiento. Autorizo a "+(DB.cfg.terapeuta||"la terapeuta")+" y el archivo fotografico del expediente."}
+function form(){var c=(editId&&findC(editId))||vacio();var v=nv(visitaEdit);var col=!!(editId&&modoNV);var op=col?"":"open";var ch="",i,x,serv="";for(i=0;i<COND.length;i++){x=COND[i];ch+='<label><input type="checkbox" name="cond" value="'+esc(x)+'"'+(c.condiciones.indexOf(x)>=0?" checked":"")+"> "+esc(x)+"</label>"}for(i=0;i<SERV.length;i++)serv+="<option"+(v.servicio===SERV[i]?" selected":"")+">"+SERV[i]+"</option>";var h="<h2>"+(!editId?"Nueva ficha":(modoNV?"Nueva visita · "+esc(c.nombre):"Editar · "+esc(c.nombre)))+"</h2>";if(col)h+='<p class="note">Datos guardados. Abre un bloque solo si hay que corregir.</p>';h+='<details class="blk" '+op+'><summary>1. Datos generales</summary><label>Nombre</label><input id="f_nombre" value="'+esc(c.nombre)+'">';h+='<div class="row"><div><label>Nacimiento</label><input id="f_fnac" type="date" value="'+esc(c.fnac)+'"></div><div><label>Edad</label><input id="f_edad" value="'+esc(c.edad)+'"></div></div>';h+='<div class="row"><div><label>Telefono</label><input id="f_tel" value="'+esc(c.tel)+'"></div><div><label>Correo</label><input id="f_email" value="'+esc(c.email)+'"></div></div>';h+='<label>Direccion</label><input id="f_dir" value="'+esc(c.dir)+'">';h+='<h3>4. Visita de hoy</h3><div class="row"><div><label>Fecha</label><input id="v_fecha" type="date" value="'+esc(v.fecha)+'"></div><div><label>Servicio</label><select id="v_serv">'+serv+'</select></div></div>';h+='<label>Motivo</label><textarea id="v_motivo">'+esc(v.motivo)+'</textarea><label>Tratamiento</label><textarea id="v_trat">'+esc(v.tratamiento)+'</textarea>';h+='<div class="phblock"><h3>Fotos ANTES</h3><input id="inAntes" type="file" accept="image/*" capture="environment" multiple><div class="photos" id="boxAntes"></div></div>';h+='<div class="phblock"><h3>Fotos DESPUES</h3><input id="inDesp" type="file" accept="image/*" capture="environment" multiple><div class="photos" id="boxDespues"></div></div>';h+='<div class="phblock"><h3>Seguimiento</h3><input id="inSeg" type="file" accept="image/*" capture="environment" multiple><div class="photos" id="boxSeg"></div></div>';h+='<details class="blk" open><summary>5. Firmas</summary><p class="note">'+cons()+'</p><label class="note" style="display:flex;gap:8px"><input type="checkbox" id="v_ok" style="width:18px;height:18px"> Autorizo el servicio.</label>';h+='<label>Firma clienta</label><div class="sigbox"><canvas id="sigCli"></canvas></div><button type="button" class="btn btn-s" id="clrCli">Borrar</button>';h+='<label>Firma terapeuta</label><div class="sigbox"><canvas id="sigTer"></canvas></div><button type="button" class="btn btn-s" id="clrTer">Borrar</button></details>';h+='<div class="actions"><button class="btn btn-g" type="button" id="btnSave">Guardar</button><button class="btn btn-s" type="button" id="btnPdf">PDF / imprimir</button></div>';$("formFicha").innerHTML=h;window._f={antes:(v.fotosAntes||[]).slice(),despues:(v.fotosDespues||[]).slice(),seg:(v.fotosSeg||[]).slice()};window._vid=v.id;drawF();sig("sigCli",v.firmaCli);sig("sigTer",v.firmaTer);$("inAntes").onchange=function(e){addF(e,"antes")};$("inDesp").onchange=function(e){addF(e,"despues")};$("inSeg").onchange=function(e){addF(e,"seg")};$("clrCli").onclick=function(){clr("sigCli")};$("clrTer").onclick=function(){clr("sigTer")};$("btnSave").onclick=guardar;$("btnPdf").onclick=guardarPdf}
+function addF(ev,t){var files=ev.target.files,i;for(i=0;i<files.length;i++){(function(f){var r=new FileReader();r.onload=function(){var img=new Image();img.onload=function(){var c=document.createElement("canvas");var w=img.width,h=img.height,m=900;if(w>m||h>m){var s=m/Math.max(w,h);w=w*s;h=h*s}c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);window._f[t].push(c.toDataURL("image/jpeg",0.72));drawF()};img.src=r.result};r.readAsDataURL(f)})(files[i])}}
+function drawF(){var map=[["antes","boxAntes"],["despues","boxDespues"],["seg","boxSeg"]],n,k,id,b,html,arr,i;for(n=0;n<map.length;n++){k=map[n][0];id=map[n][1];b=$(id);if(!b)continue;html="";arr=window._f[k]||[];for(i=0;i<arr.length;i++)html+='<img src="'+arr[i]+'" data-k="'+k+'" data-i="'+i+'">';b.innerHTML=html}}
+function sig(id,ex){var c=$(id);if(!c)return;var x=c.getContext("2d"),r=c.getBoundingClientRect();c.width=Math.max(280,r.width)*2;c.height=280;x.scale(2,2);x.lineWidth=2;x.lineCap="round";if(ex){var im=new Image();im.onload=function(){x.drawImage(im,0,0,r.width,140)};im.src=ex}var d=0,lx=0,ly=0;function pos(e){var rr=c.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:t.clientX-rr.left,y:t.clientY-rr.top}}function st(e){e.preventDefault();d=1;var q=pos(e);lx=q.x;ly=q.y}function mv(e){if(!d)return;e.preventDefault();var q=pos(e);x.beginPath();x.moveTo(lx,ly);x.lineTo(q.x,q.y);x.stroke();lx=q.x;ly=q.y}function en(){d=0}c.onmousedown=st;c.onmousemove=mv;window.addEventListener("mouseup",en);c.addEventListener("touchstart",st,{passive:false});c.addEventListener("touchmove",mv,{passive:false});c.addEventListener("touchend",en)}
+function clr(id){var c=$(id);c.getContext("2d").clearRect(0,0,c.width,c.height)}
+function sigD(id){var c=$(id);if(!c)return"";var b=document.createElement("canvas");b.width=c.width;b.height=c.height;return c.toDataURL()===b.toDataURL()?"":c.toDataURL()}
+function val(id){var e=$(id);return e?e.value:""}
+function leer(){var cond=[],boxes=document.querySelectorAll("input[name=cond]:checked"),i;for(i=0;i<boxes.length;i++)cond.push(boxes[i].value);var c={id:editId||uid(),nombre:val("f_nombre").trim(),fnac:val("f_fnac"),edad:val("f_edad"),tel:val("f_tel"),email:val("f_email"),dir:val("f_dir"),ocup:"",referido:"",emergNombre:"",emergPar:"",emergTel:"",alergias:"",meds:"",notasMed:"",condiciones:cond,peso:"",estatura:"",cintura:"",cadera:"",busto:"",muslo:"",tipoPiel:"",fototipo:"",creado:new Date().toISOString(),visitas:[]};var v={id:window._vid||uid(),fecha:val("v_fecha"),servicio:val("v_serv"),motivo:val("v_motivo"),tratamiento:val("v_trat"),productos:"",reaccion:"",recs:"",fotosAntes:window._f.antes,fotosDespues:window._f.despues,fotosSeg:window._f.seg,notaSeg:"",firmaCli:sigD("sigCli"),firmaTer:sigD("sigTer"),acepta:!!$("v_ok")&&$("v_ok").checked};return{c:c,v:v}}
+function guardar(){var r=leer(),c=r.c,v=r.v;if(!c.nombre){toast("Falta nombre");return null}var p=findC(c.id);if(p){v.id=visitaEdit?visitaEdit.id:v.id;var vs=p.visitas||[],found=-1,i,k;for(i=0;i<vs.length;i++)if(vs[i].id===v.id)found=i;if(found>=0)vs[found]=v;else vs.unshift(v);c.id=p.id;c.creado=p.creado;c.visitas=vs;for(k in c)p[k]=c[k]}else{c.visitas=[v];DB.clientes.push(c)}editId=c.id;visitaEdit=v;save();toast("Guardado");return{c:findC(c.id),v:v}}
+function guardarPdf(){var r=guardar();if(r)imp(r.c,r.v)}
+function abrir(id){var c=findC(id);$("tab-clientes").classList.add("hidden");$("tab-nueva").classList.add("hidden");$("tab-ajustes").classList.add("hidden");$("vistaCliente").classList.remove("hidden");var vis="",arr=c.visitas||[],i,n;if(!arr.length)vis='<p class="note">Sin visitas</p>';for(i=0;i<arr.length;i++){n=nv(arr[i]);vis+='<div class="card"><b>'+esc(n.fecha)+" \u00b7 "+esc(n.servicio)+'</b><p class="note">'+esc(n.tratamiento||n.motivo||"")+'</p><div class="mini">'+thumbs(n.fotosAntes)+thumbs(n.fotosDespues)+thumbs(n.fotosSeg)+'</div><div class="actions"><button class="btn btn-s" type="button" data-edvis="'+c.id+"|"+n.id+'">Editar</button></div></div>'}$("vistaCliente").innerHTML='<div class="card"><h2>'+esc(c.nombre)+'</h2><p class="note">'+esc(c.tel||"")+'</p><div class="actions"><button class="btn btn-p" type="button" data-nvis="'+c.id+'">+ Nueva visita</button><button class="btn btn-s" type="button" data-edbase="'+c.id+'">Editar datos</button><button class="btn btn-d" type="button" data-bor="'+c.id+'">Eliminar</button><button class="btn btn-s" type="button" data-back="1">Volver</button></div></div><h3>Historial</h3>'+vis}
+function nVis(id){editId=id;visitaEdit=null;modoNV=true;irTab("nueva")}
+function edBase(id){editId=id;visitaEdit=null;modoNV=false;irTab("nueva")}
+function edVis(cid,vid){var c=findC(cid),v=null,arr=c.visitas||[],i;for(i=0;i<arr.length;i++)if(arr[i].id===vid)v=arr[i];editId=cid;visitaEdit=nv(v);modoNV=true;irTab("nueva")}
+function bor(id){if(!confirm("Eliminar?"))return;var out=[],i;for(i=0;i<DB.clientes.length;i++)if(DB.clientes[i].id!==id)out.push(DB.clientes[i]);DB.clientes=out;save();irTab("clientes")}
+function imp(c,v){v=nv(v);$("printArea").innerHTML="<div><b>"+esc(DB.cfg.nombre)+"</b><p>"+esc(c.nombre)+" "+esc(v.fecha)+"</p><p>"+esc(v.tratamiento||"")+"</p></div>";window.print()}
+function exportarJSON(){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(DB)]));a.download="respaldo-fichaspa.json";a.click()}
+function importarJSON(ev){var f=ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);if(!d.clientes)throw 1;if(!confirm("Reemplazar?"))return;DB=d;save();cfg();lista();toast("OK")}catch(e){toast("Archivo invalido")}};r.readAsText(f)}
+document.querySelectorAll("nav.tabs button").forEach(function(b){b.onclick=function(){irTab(b.getAttribute("data-tab"))}});
+$("btnNueva").onclick=nuevoCliente;
+$("btnCfg").onclick=guardarAjustes;
+$("btnExp").onclick=exportarJSON;
+$("btnImp").onclick=function(){$("imp").click()};
+$("imp").onchange=importarJSON;
+$("q").oninput=lista;
+document.addEventListener("click",function(e){var t=e.target;if(t.getAttribute("data-open"))abrir(t.getAttribute("data-open"));if(t.getAttribute("data-nvis"))nVis(t.getAttribute("data-nvis"));if(t.getAttribute("data-edbase"))edBase(t.getAttribute("data-edbase"));if(t.getAttribute("data-bor"))bor(t.getAttribute("data-bor"));if(t.getAttribute("data-back"))irTab("clientes");if(t.getAttribute("data-edvis")){var p=t.getAttribute("data-edvis").split("|");edVis(p[0],p[1])}if(t.tagName==="IMG"&&t.getAttribute("data-k")&&confirm("Quitar?")){window._f[t.getAttribute("data-k")].splice(+t.getAttribute("data-i"),1);drawF()}});
+load();lista();
+</script></body></html>
